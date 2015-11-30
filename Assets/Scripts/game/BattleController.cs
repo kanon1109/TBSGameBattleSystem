@@ -7,12 +7,6 @@ using UnityEngine;
 /// </summary>
 public class BattleController
 {
-    //攻击类型
-    enum attackType
-    {
-        CLOSE = 1,
-        REMOTE = 2
-    }
     //我方队伍
     private List<BattleRole> myTeam = new List<BattleRole>();
     //对方队伍
@@ -199,19 +193,22 @@ public class BattleController
     {
         this.curRound++;
         //选出攻击者
-        this.selectedAttack(null);
+        this.startRoleAttack(null);
     }
 
-    private void selectedAttack(object param)
+    /// <summary>
+    /// 角色开始攻击
+    /// </summary>
+    /// <param name="param"></param>
+    private void startRoleAttack(object param)
     {
-        MonoBehaviour.print("selectedAttack");
         if (this.attackList.Count == 0) return;
         BattleRole br = this.attackList[0];
+        br.attack();
         this.attackList.RemoveAt(0);
-        MonoBehaviour.print("index " + br.index);
         bool autoDestroy = false;
         if (this.attackList.Count == 1) autoDestroy = true;
-        Delay.setDelay(this.roleParent.gameObject, 500, selectedAttack, autoDestroy);
+        Delay.setDelay(this.roleParent.gameObject, 500, startRoleAttack, autoDestroy);
     }
 
     /// <summary>
