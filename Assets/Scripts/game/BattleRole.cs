@@ -6,20 +6,24 @@ public class BattleRole:object
     private GameObject roleGo = null;
     //位置索引
     private int _index = -1;
+    //起始位置
+    private Vector3 _startPos;
+    //绑定的武将数据
+    private HeroVo hVo;
+    //攻击的目标
+    private BattleRole targetBr = null;
+    //-------------get set ---------------
     public int index
     {
         get { return _index; }
         set { _index = value; }
     }
-    //起始位置
-    private Vector3 _startPos;
+
     public Vector3 startPos
     {
         get { return _startPos; }
     }
 
-    //绑定的武将数据
-    private HeroVo hVo;
     public HeroVo heroVo
     {
         get { return hVo; }
@@ -70,5 +74,14 @@ public class BattleRole:object
     public void hurt()
     {
         MonoBehaviour.print("hurt");
+    }
+
+    /// <summary>
+    /// 设置攻击者的目标对象
+    /// </summary>
+    /// <param name="br">目标对象</param>
+    public void setAttackTarget(BattleRole br)
+    {
+        this.targetBr = br;
     }
 }

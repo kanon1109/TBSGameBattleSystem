@@ -13,7 +13,6 @@ public class BattleController
         CLOSE = 1,
         REMOTE = 2
     }
-
     //我方队伍
     private List<BattleRole> myTeam = new List<BattleRole>();
     //对方队伍
@@ -27,7 +26,9 @@ public class BattleController
     //是否是我方队伍出手
     private bool isMyTeam;
     //人物模型的父级
-    private Transform roleParent; 
+    private Transform roleParent;
+    //当前回合数
+    private int curRound = 0;
     /// <summary>
     /// 初始化
     /// </summary>
@@ -60,6 +61,7 @@ public class BattleController
         //用于测试攻击动作
         this.getAttacker(true, 5);
         this.getAttackTarget(true);
+        this.startRound();
     }
 
     private void initTestData()
@@ -165,7 +167,7 @@ public class BattleController
         List<BattleRole> closeList = new List<BattleRole>();
         for (int i = 0; i < count; ++i)
         {
-            BattleRole br = this.attackList[i];
+            BattleRole attackRole = this.attackList[i];
             float dis = float.MaxValue;
             int index = 0;
             //查找距离最近的对手
@@ -173,20 +175,43 @@ public class BattleController
             {
                 BattleRole targetBr = targetList[j];
                 if (closeList.IndexOf(targetBr) != -1) continue;
-                float curDis = (br.startPos - targetBr.startPos).sqrMagnitude;
+                float curDis = (attackRole.startPos - targetBr.startPos).sqrMagnitude;
                 if (curDis < dis)
                 {
                     index = j;
                     dis = curDis;
                 }
             }
+
             //计算被攻击者剩余血量 如果进攻后血量为0 则放入关闭列表中
             BattleRole chooseBr = targetList[index];
-            if (DamageUtils.checkRoleDead(br.heroVo, chooseBr.heroVo))
+            if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
                 closeList.Add(chooseBr);
-
-
+            //将目标存放进去
+            attackRole.setAttackTarget(chooseBr);
         }
+    }
+
+    /// <summary>
+    /// 开始一轮攻击
+    /// </summary>
+    private void startRound()
+    {
+        this.curRound++;
+        //选出攻击者
+        this.selectedAttack(null);
+    }
+
+    private void selectedAttack(object param)
+    {
+        MonoBehaviour.print("selectedAttack");
+        if (this.attackList.Count == 0) return;
+        BattleRole br = this.attackList[0];
+        this.attackList.RemoveAt(0);
+        MonoBehaviour.print("index " + br.index);
+        bool autoDestroy = false;
+        if (this.attackList.Count == 1) autoDestroy = true;
+        Delay.setDelay(this.roleParent.gameObject, 500, selectedAttack, autoDestroy);
     }
 
     /// <summary>
