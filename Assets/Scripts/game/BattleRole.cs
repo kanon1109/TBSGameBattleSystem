@@ -1,16 +1,13 @@
-﻿using UnityEngine;
-
-public class BattleRole:object 
+﻿using DG.Tweening;
+using UnityEngine;
+using support;
+public class BattleRole : object 
 {
     //----------人物状态------------
     //站立不动
     public const int STAND = 1;
     //移动
     public const int MOVE = 2;
-    //攻击
-    public const int ATTACK = 3;
-    //受伤
-    public const int HURT = 4;
     //--------------------------
     //人物模型
     private GameObject roleGo = null;
@@ -29,7 +26,7 @@ public class BattleRole:object
     //动作回调代理
     private delegate void ActComplete();
     //速度
-    private float speed = .2f;
+    private float speed = 1f;
     //横向速度
     private float vx = 0;
     //纵向速度
@@ -40,6 +37,14 @@ public class BattleRole:object
     private float minDis = 1;
     //移动结束后的回调
     private ActComplete moveCompleteHandler = null;
+    //是否往回移动
+    private bool isMoveBack = false;
+    //是否是我方队伍的人
+    private bool _isMyTeam = false;
+    //当前伤害的血量
+    private int curDamage = 0;
+    //是否归位
+    private bool _isBack = true;
     //-------------get set ---------------
     public int index
     {
@@ -58,9 +63,131 @@ public class BattleRole:object
         set { hVo = value; }
     }
 
+    public bool isMyTeam
+    {
+        get { return _isMyTeam; }
+        set { _isMyTeam = value; }
+    }
+
+    public bool isBack
+    {
+        get { return _isBack; }
+    }
+
     public BattleRole()
     {
         
+    }
+
+    /// <summary>
+    /// 移动到某个地方
+    /// </summary>
+    /// <param name="pos">目标位置</param>
+    /// <param name="isBack">是否返回原位</param>
+    /// <param name="actComplete">移动结束回调</param>
+    private void moveTo(Vector3 pos, bool isBack, ActComplete actComplete = null)
+    {
+        this._isBack = false;
+        this.isMoveBack = isBack;
+        this.moveTargetPos = pos;
+        Vector3 curPos = this.roleGo.transform.localPosition;
+        float x = this.moveTargetPos.x - curPos.x;
+        float y = this.moveTargetPos.z - curPos.z;
+        float angle = Mathf.Atan2(y, x);
+        this.vx = Mathf.Cos(angle) * speed;
+        this.vz = Mathf.Sin(angle) * speed;
+        this.moveCompleteHandler = actComplete;
+        this.status = MOVE;
+    }
+
+    private void moveToTargetComplete()
+    {
+        this.status = STAND;
+        this.vx = 0;
+        this.vz = 0;
+        if (!this.isMoveBack)
+        {
+            //攻击动作
+            float posX = this.roleGo.transform.localPosition.x;
+            if(this.isMyTeam) posX += 1.5f;
+            else posX -= 1.5f;
+            this.roleGo.transform.DOLocalMoveX(posX, .1f).SetDelay(.5f).SetLoops(2, LoopType.Yoyo).OnComplete(attackCompleteHandler);
+        }
+        else
+        {
+            //回原位
+            this.roleGo.transform.localPosition = this._startPos;
+            this._isBack = true;
+            NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_BACK);
+        }
+    }
+
+    //攻击动作结束
+    private void attackCompleteHandler()
+    {
+        int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
+        //目标受伤
+        this.targetBr.hurt(damage);
+        //移动回原位
+        this.moveTo(this.startPos, true, moveToTargetComplete);
+    }
+
+    /// <summary>
+    /// 站立动作
+    /// </summary>
+    private void standStatus()
+    {
+        if (this.status == STAND)
+        {
+            this.vx = 0;
+            this.vz = 0;
+        }
+    }
+
+    /// <summary>
+    /// 移动状态
+    /// </summary>
+    private void moveStatus()
+    {
+        if (this.status == MOVE)
+        {
+            //更新位置
+            this.roleGo.transform.localPosition = new Vector3(this.roleGo.transform.localPosition.x + this.vx,
+                                                              this.roleGo.transform.localPosition.y,
+                                                              this.roleGo.transform.localPosition.z + this.vz);
+            float dis = Vector3.Distance(this.roleGo.transform.localPosition, this.moveTargetPos);
+            if (dis <= this.minDis)
+            {
+                if (this.moveCompleteHandler != null)
+                    this.moveCompleteHandler.Invoke();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新角色状态
+    /// </summary>
+    private void updateStatus()
+    {
+        this.standStatus();
+        this.moveStatus();
+    }
+
+    /// <summary>
+    /// 帧循环
+    /// </summary>
+    private void updateHandler()
+    {
+        this.updateStatus();
+    }
+
+    /// <summary>
+    /// 是否死亡
+    /// </summary>
+    /// <returns></returns>
+    private bool isDead()
+    {
+        return this.heroVo.hp <= 0;
     }
 
     /// <summary>
@@ -68,7 +195,7 @@ public class BattleRole:object
     /// </summary>
     /// <param name=parent>父级容器</param>
     /// <returns></returns>
-    public void create(Transform parent, Vector3 pos = new Vector3()) 
+    public void create(Transform parent, Vector3 pos = new Vector3())
     {
         GameObject pf = Resources.Load("Prefabs/role") as GameObject;
         this.roleGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
@@ -76,7 +203,6 @@ public class BattleRole:object
         this.roleGo.transform.localScale = new Vector3(1, 1, 1);
         this.roleGo.transform.localPosition = pos;
         this._startPos = pos;
-
         if (this.timer == null)
             this.timer = this.roleGo.AddComponent<Timer>();
         else
@@ -109,7 +235,10 @@ public class BattleRole:object
         {
             case BattleConstant.CLOSE:
                 //移动 + 打击 + 被击动作 + 移动回来
-                this.moveAct(this.targetBr.startPos, moveComplete);
+                Vector3 pos = new Vector3(-1, 0);
+                if (!this.isMyTeam) pos = new Vector3(1, 0);
+                Vector3 targetPos = this.targetBr.startPos + pos;
+                this.moveTo(targetPos, false, moveToTargetComplete);
                 break;
             case BattleConstant.REMOTE:
                 //施法动作 + 魔法移动 + 被击动作
@@ -118,31 +247,30 @@ public class BattleRole:object
     }
 
     /// <summary>
-    /// 移动
+    /// 伤害
     /// </summary>
-    /// <param name="pos">目标位置</param>
-    /// <param name="actComplete">移动结束回调</param>
-    private void moveAct(Vector3 pos, ActComplete actComplete = null)
+    /// <param name="damage">扣的血量</param>
+    public void hurt(int damage)
     {
-        this.moveTargetPos = pos;
-        float x = this.moveTargetPos.x - this._startPos.x;
-        float y = this.moveTargetPos.z - this._startPos.z;
-        float angle = Mathf.Atan2(y, x);
-        this.vx = Mathf.Cos(angle) * speed;
-        this.vz = Mathf.Sin(angle) * speed;
-        this.moveCompleteHandler = actComplete;
-        this.status = MOVE;
-    }
-
-    private void moveComplete()
-    {
-        this.standStatus();
-        //攻击
-    }
-
-    public void hurt()
-    {
+        //受伤效果
         MonoBehaviour.print("hurt");
+        this.curDamage = damage;
+        this.heroVo.hp -= damage;
+        //发送死亡消息
+        if(this.isDead()) NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_DEAD, this);
+        float posX = this.roleGo.transform.localPosition.x;
+        if(!this.isMyTeam) posX += 1.5f;
+        else posX -= 1.5f;
+        this.roleGo.transform.DOLocalMoveX(posX, .1f).SetLoops(2, LoopType.Yoyo).OnComplete(hurtCompleteHandler);
+    }
+
+
+    //受伤动作结束
+    private void hurtCompleteHandler()
+    {
+        //扣血效果
+        if(this.isDead())
+            this.destroy();
     }
 
     /// <summary>
@@ -155,52 +283,13 @@ public class BattleRole:object
     }
 
     /// <summary>
-    /// 站立动作
+    /// 销毁
     /// </summary>
-    private void standStatus()
+    public void destroy()
     {
-        if (this.status == STAND)
-        {
-            this.vx = 0;
-            this.vz = 0;
-        }
-    }
-
-    /// <summary>
-    /// 移动状态
-    /// </summary>
-    private void moveStatus()
-    {
-        if (this.status == MOVE)
-        {
-            //更新位置
-            this.roleGo.transform.localPosition = new Vector3(this.roleGo.transform.localPosition.x + this.vx,
-                                                              this.roleGo.transform.localPosition.y,
-                                                              this.roleGo.transform.localPosition.z + this.vz);
-            float dis = Vector3.Distance(this.roleGo.transform.localPosition, this.moveTargetPos);
-            if (dis <= this.minDis)
-            {
-                //移动结束回调
-                if (this.moveCompleteHandler != null)
-                    this.moveCompleteHandler.Invoke();
-            }
-        }
-    }
-
-    /// <summary>
-    /// 更新角色状态
-    /// </summary>
-    private void updateStatus()
-    {
-        this.standStatus();
-        this.moveStatus();
-    }
-
-    /// <summary>
-    /// 帧循环
-    /// </summary>
-    private void updateHandler()
-    {
-        this.updateStatus();
+        GameObject.Destroy(this.roleGo);
+        this.roleGo = null;
+        this.timer = null;
+        this.heroVo = null;
     }
 }

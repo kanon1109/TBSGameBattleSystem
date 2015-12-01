@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using support;
+using System.Collections.Generic;
 using UnityEngine;
 /// <summary>
 /// 规则：
@@ -28,11 +29,46 @@ public class BattleController
     /// </summary>
     public void init(Transform parent)
     {
+        NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
+        NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_BACK, roleBackHandler);
         KeyboardManager.registerKey(UnityEngine.KeyCode.A, onKeyAttackHandler, false);
-        KeyboardManager.registerKey(UnityEngine.KeyCode.H, onKeyHurtHandler, false);
         this.roleParent = parent;
         this.initTestData();
         this.resetData();
+    }
+
+    //人物归位消息
+    private void roleBackHandler(object param)
+    {
+        if(this.isAllBack(this.isMyTeam))
+        {
+            //如果全部归位 攻防切换
+            this.changeAttacker();
+        }
+    }
+
+    //人物死亡消息
+    private void roleDeadHandler(object param)
+    {
+        //角色死亡消息
+        BattleRole br = (BattleRole)param;
+        int index = br.index;
+        //从目标列表中删除此目标
+        List<BattleRole> list;
+        if (this.isMyTeam) 
+            list = this.targetTeam;
+        else 
+            list = this.myTeam;
+        int length = list.Count;
+        for (int i = 0; i < length; i++)
+        {
+            BattleRole battleRole = list[i];
+            if (battleRole.index == index)
+            {
+                list.RemoveAt(i);
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -45,16 +81,11 @@ public class BattleController
         this.isMyTeam = true;
     }
 
-    private void onKeyHurtHandler()
-    {
-        //用于测试防御动作
-    }
-
     private void onKeyAttackHandler()
     {
         //用于测试攻击动作
-        this.getAttacker(true, 5);
-        this.getAttackTarget(true);
+        this.getAttacker(this.isMyTeam, 3);
+        this.getAttackTarget(this.isMyTeam);
         this.startRound();
     }
 
@@ -68,10 +99,12 @@ public class BattleController
             hVo.atk = 10;
             hVo.def = 5;
             hVo.hp = 100;
+            hVo.id = i + 1;
 
             BattleRole br = new BattleRole();
             br.index = i;
             br.create(this.roleParent, pos);
+            br.isMyTeam = true;
             br.heroVo = hVo;
             myTeam.Add(br);
             pos.z -= 5;
@@ -89,10 +122,12 @@ public class BattleController
             hVo.atk = 10;
             hVo.def = 5;
             hVo.hp = 5;
+            hVo.id = i + 6;
 
             BattleRole br = new BattleRole();
             br.index = i;
             br.create(this.roleParent, pos);
+            br.isMyTeam = false;
             br.heroVo = hVo;
             targetTeam.Add(br);
             pos.z -= 5;
@@ -143,7 +178,7 @@ public class BattleController
             this.myTeamIndex = teamIndex;
         else
             this.targetTeamIndex = teamIndex;
-        MonoBehaviour.print("this.myTeamIndex " + this.myTeamIndex);
+        //MonoBehaviour.print("this.myTeamIndex " + this.myTeamIndex);
     }
 
     /// <summary>
@@ -176,7 +211,6 @@ public class BattleController
                     dis = curDis;
                 }
             }
-
             //计算被攻击者剩余血量 如果进攻后血量为0 则放入关闭列表中
             BattleRole chooseBr = targetList[index];
             if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
@@ -202,12 +236,13 @@ public class BattleController
     /// <param name="param"></param>
     private void startRoleAttack(object param)
     {
+        MonoBehaviour.print("this.attackList.Count " + this.attackList.Count);
         if (this.attackList.Count == 0) return;
         BattleRole br = this.attackList[0];
         br.attack();
         this.attackList.RemoveAt(0);
         bool autoDestroy = false;
-        if (this.attackList.Count == 1) autoDestroy = true;
+        if (this.attackList.Count == 0) autoDestroy = true;
         Delay.setDelay(this.roleParent.gameObject, 500, startRoleAttack, autoDestroy);
     }
 
@@ -224,5 +259,37 @@ public class BattleController
         else
             team = this.targetTeam;
         return team.Count == 0;
+    }
+
+    /// <summary>
+    /// 是否全部归位
+    /// </summary>
+    /// <param name="isMyTeam">是否是我方队伍</param>
+    /// <returns></returns>
+    private bool isAllBack(bool isMyTeam)
+    {
+        List<BattleRole> team = null;
+        if (isMyTeam)
+            team = this.myTeam;
+        else
+            team = this.targetTeam;
+        int count = team.Count;
+        for (int i = 0; i < count; i++)
+        {
+            BattleRole br = team[i];
+            if (!br.isBack) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 切换进攻方
+    /// </summary>
+    private void changeAttacker()
+    {
+        this.isMyTeam = !this.isMyTeam;
+        this.getAttacker(this.isMyTeam, 3);
+        this.getAttackTarget(this.isMyTeam);
+        this.startRound();
     }
 }
