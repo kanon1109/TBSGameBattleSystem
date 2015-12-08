@@ -5,6 +5,10 @@ using UnityEngine;
 /// 规则：
 /// 1.根据数量获取出战人数，队伍中每人轮流出战。（例如：第一轮 1号位出战，第二轮2号位 …… 依次类推）
 /// 2.攻击者优先攻击最靠近自己的敌人
+/// 
+/// TODO 
+/// 一轮内的状态
+/// 远程攻击
 /// </summary>
 public class BattleController
 {
@@ -23,12 +27,23 @@ public class BattleController
     //人物模型的父级
     private Transform roleParent;
     //当前回合数
-    private int curRound = 0;
+    private int _curRound = 1;
+    public int curRound
+    {
+        get { return _curRound; }
+    }
+    //我方队伍是否攻击过
+    private bool myTeamAttacked = false;
+    //敌方队伍是否攻击过
+    private bool targetTeamAttacked = false;
+    //是否开始攻击了
+    private bool isStartAttack = false;
     /// <summary>
     /// 初始化
     /// </summary>
     public void init(Transform parent)
     {
+        NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_BACK, roleBackHandler);
         KeyboardManager.registerKey(UnityEngine.KeyCode.A, onKeyAttackHandler, false);
@@ -42,8 +57,18 @@ public class BattleController
     {
         if(this.isAllBack(this.isMyTeam))
         {
-            //如果全部归位 攻防切换
-            this.changeAttacker();
+            if (!this.allDead(!this.isMyTeam))
+            {
+                //如果全部归位 攻防切换
+                this.changeAttacker();
+            }
+            else
+            {
+                if(!this.isMyTeam)
+                    NotificationCenter.getInstance().postNotification(BattleMsgConstant.MY_TEAM_ALL_DEAD); //我方全部死亡
+                else
+                    NotificationCenter.getInstance().postNotification(BattleMsgConstant.TARGET_TEAM_ALL_DEAD); //敌方全部死亡 
+            }
         }
     }
 
@@ -76,17 +101,26 @@ public class BattleController
     /// </summary>
     private void resetData()
     {
+        this._curRound = 1;
         this.myTeamIndex = 0;
         this.targetTeamIndex = 0;
         this.isMyTeam = true;
+        this.myTeamAttacked = false;
+        this.targetTeamAttacked = false;
+        this.isStartAttack = false;
     }
 
     private void onKeyAttackHandler()
     {
         //用于测试攻击动作
-        this.getAttacker(this.isMyTeam, 3);
-        this.getAttackTarget(this.isMyTeam);
-        this.startRound();
+        if (!this.myTeamAttacked && 
+            !this.targetTeamAttacked && 
+            !this.isStartAttack)
+        {
+            this.getAttacker(this.isMyTeam, 3);
+            this.getAttackTarget(this.isMyTeam);
+            this.startRoleAttack(null);
+        }
     }
 
     private void initTestData()
@@ -178,7 +212,6 @@ public class BattleController
             this.myTeamIndex = teamIndex;
         else
             this.targetTeamIndex = teamIndex;
-        //MonoBehaviour.print("this.myTeamIndex " + this.myTeamIndex);
     }
 
     /// <summary>
@@ -221,16 +254,6 @@ public class BattleController
     }
 
     /// <summary>
-    /// 开始一轮攻击
-    /// </summary>
-    private void startRound()
-    {
-        this.curRound++;
-        //选出攻击者
-        this.startRoleAttack(null);
-    }
-
-    /// <summary>
     /// 角色开始攻击
     /// </summary>
     /// <param name="param"></param>
@@ -238,6 +261,7 @@ public class BattleController
     {
         MonoBehaviour.print("this.attackList.Count " + this.attackList.Count);
         if (this.attackList.Count == 0) return;
+        this.isStartAttack = true;
         BattleRole br = this.attackList[0];
         br.attack();
         this.attackList.RemoveAt(0);
@@ -287,9 +311,24 @@ public class BattleController
     /// </summary>
     private void changeAttacker()
     {
-        this.isMyTeam = !this.isMyTeam;
-        this.getAttacker(this.isMyTeam, 3);
-        this.getAttackTarget(this.isMyTeam);
-        this.startRound();
+        if (this.isMyTeam && !this.myTeamAttacked) this.myTeamAttacked = true;
+        if (!this.isMyTeam && !this.targetTeamAttacked) this.targetTeamAttacked = true;
+        if (!this.myTeamAttacked || !this.targetTeamAttacked)
+        {
+            this.isMyTeam = !this.isMyTeam;
+            this.getAttacker(this.isMyTeam, 3);
+            this.getAttackTarget(this.isMyTeam);
+            this.startRoleAttack(null);
+        }
+        //如果2次都打完了回合结束
+        if (this.myTeamAttacked && this.targetTeamAttacked)
+        {
+            this._curRound++;
+            this.myTeamAttacked = false;
+            this.targetTeamAttacked = false;
+            this.isMyTeam = true;
+            this.isStartAttack = false;
+            NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROUND_FINISH);
+        }
     }
 }
