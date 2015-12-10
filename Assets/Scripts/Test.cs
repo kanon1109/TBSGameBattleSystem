@@ -17,7 +17,7 @@ public class Test:MonoBehaviour
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROUND_FINISH, roundFinishHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.MY_TEAM_ALL_DEAD, myTeamAllDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.TARGET_TEAM_ALL_DEAD, targetTeamAllDeadHandler);
-        this.bc.init(this.battleScene.transform);
+        this.bc.init();
         this.roundTxt.text = this.bc.curRound.ToString();
     }
 

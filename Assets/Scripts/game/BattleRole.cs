@@ -45,6 +45,9 @@ public class BattleRole : object
     private int curDamage = 0;
     //是否归位
     private bool _isBack = true;
+    //血条
+    private HpBar hpBar;
+    private GameObject hpBarGo;
     //-------------get set ---------------
     public int index
     {
@@ -178,6 +181,7 @@ public class BattleRole : object
     /// </summary>
     private void updateHandler()
     {
+        this.updateHpBarPos();
         this.updateStatus();
     }
 
@@ -223,6 +227,43 @@ public class BattleRole : object
     }
 
     /// <summary>
+    /// 创建血条
+    /// </summary>
+    /// <param name="parent">父级容器</param>
+    public void createHpBar(Transform parent)
+    {
+        if(this.hpBar == null)
+        {
+            GameObject pf = Resources.Load("Prefabs/hpBar") as GameObject;
+            this.hpBarGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
+            this.hpBarGo.transform.SetParent(parent);
+            this.hpBarGo.transform.localScale = new Vector3(1, 1, 1);
+            this.hpBarGo.transform.localPosition = new Vector3();
+            this.hpBar = this.hpBarGo.GetComponent<HpBar>();
+        }
+    }
+
+    /// <summary>
+    /// 初始化满血血量
+    /// </summary>
+    /// <param name="maxHp">满血</param>
+    public void initHpBarMax(int maxHp)
+    {
+        if (this.hpBar != null)
+            this.hpBar.setMaxHp(maxHp);
+    }
+
+    /// <summary>
+    /// 更新血条位置
+    /// </summary>
+    private void updateHpBarPos()
+    {
+        if (this.hpBarGo != null)
+            this.hpBarGo.transform.position =
+                Camera.main.WorldToScreenPoint(this.roleGo.transform.position) + new Vector3(0, 30, 0);
+    }
+
+    /// <summary>
     /// 普通攻击
     /// </summary>
     public void attack()
@@ -256,6 +297,8 @@ public class BattleRole : object
         MonoBehaviour.print("hurt");
         this.curDamage = damage;
         this.heroVo.hp -= damage;
+        Damage.show(Layer.Instance.battleUILayer.transform, damage, this.hpBar.transform.localPosition);
+        if (this.hpBar != null) this.hpBar.setHp(this.heroVo.hp);
         //发送死亡消息
         if(this.isDead()) NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_DEAD, this);
         float posX = this.roleGo.transform.localPosition.x;
@@ -289,6 +332,9 @@ public class BattleRole : object
     {
         GameObject.Destroy(this.roleGo);
         this.roleGo = null;
+        GameObject.Destroy(this.hpBarGo);
+        this.hpBarGo = null;
+        this.hpBar = null;
         this.timer = null;
         this.heroVo = null;
     }

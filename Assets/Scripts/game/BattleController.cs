@@ -7,7 +7,8 @@ using UnityEngine;
 /// 2.攻击者优先攻击最靠近自己的敌人
 /// 
 /// TODO 
-/// 一轮内的状态
+/// [一轮内的状态]
+/// [显示掉血和人物血量]
 /// 远程攻击
 /// </summary>
 public class BattleController
@@ -24,8 +25,6 @@ public class BattleController
     private int targetTeamIndex = 0;
     //是否是我方队伍出手
     private bool isMyTeam;
-    //人物模型的父级
-    private Transform roleParent;
     //当前回合数
     private int _curRound = 1;
     public int curRound
@@ -41,13 +40,12 @@ public class BattleController
     /// <summary>
     /// 初始化
     /// </summary>
-    public void init(Transform parent)
+    public void init()
     {
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_BACK, roleBackHandler);
         KeyboardManager.registerKey(UnityEngine.KeyCode.A, onKeyAttackHandler, false);
-        this.roleParent = parent;
         this.initTestData();
         this.resetData();
     }
@@ -130,14 +128,16 @@ public class BattleController
         for (int i = 0; i < 6; ++i)
         {
             HeroVo hVo = new HeroVo();
-            hVo.atk = 10;
-            hVo.def = 5;
-            hVo.hp = 100;
+            hVo.atk = RandomUtil.randint(15, 35);
+            hVo.def = RandomUtil.randint(2, 5);
+            hVo.hp = RandomUtil.randint(20, 50);
             hVo.id = i + 1;
 
             BattleRole br = new BattleRole();
             br.index = i;
-            br.create(this.roleParent, pos);
+            br.create(Layer.Instance.battleScene.transform, pos);
+            br.createHpBar(Layer.Instance.battleUILayer.transform);
+            br.initHpBarMax(hVo.hp);
             br.isMyTeam = true;
             br.heroVo = hVo;
             myTeam.Add(br);
@@ -153,14 +153,17 @@ public class BattleController
         for (int i = 0; i < 6; ++i)
         {
             HeroVo hVo = new HeroVo();
-            hVo.atk = 10;
-            hVo.def = 5;
-            hVo.hp = 5;
+            hVo.atk = RandomUtil.randint(15, 35);
+            hVo.def = RandomUtil.randint(2, 5);
+            hVo.hp = RandomUtil.randint(20, 50);
             hVo.id = i + 6;
 
             BattleRole br = new BattleRole();
             br.index = i;
-            br.create(this.roleParent, pos);
+            br.create(Layer.Instance.battleScene.transform, pos);
+            br.createHpBar(Layer.Instance.battleUILayer.transform);
+            br.initHpBarMax(hVo.hp);
+
             br.isMyTeam = false;
             br.heroVo = hVo;
             targetTeam.Add(br);
@@ -267,7 +270,7 @@ public class BattleController
         this.attackList.RemoveAt(0);
         bool autoDestroy = false;
         if (this.attackList.Count == 0) autoDestroy = true;
-        Delay.setDelay(this.roleParent.gameObject, 500, startRoleAttack, autoDestroy);
+        Delay.setDelay(Layer.Instance.battleScene, 500, startRoleAttack, autoDestroy);
     }
 
     /// <summary>
