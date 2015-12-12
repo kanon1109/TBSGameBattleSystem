@@ -9,6 +9,7 @@ using UnityEngine;
 /// TODO 
 /// [一轮内的状态]
 /// [显示掉血和人物血量]
+/// 增加阵位 通过阵位判断距离
 /// 远程攻击
 /// </summary>
 public class BattleController
@@ -124,7 +125,6 @@ public class BattleController
     private void initTestData()
     {
         //此处为测试数据
-        Vector3 pos = new Vector3(-5, 0, 45);
         for (int i = 0; i < 6; ++i)
         {
             HeroVo hVo = new HeroVo();
@@ -135,21 +135,14 @@ public class BattleController
 
             BattleRole br = new BattleRole();
             br.index = i;
-            br.create(Layer.Instance.battleScene.transform, pos);
+            br.create(Layer.Instance.battleScene.transform);
             br.createHpBar(Layer.Instance.battleUILayer.transform);
             br.initHpBarMax(hVo.hp);
             br.isMyTeam = true;
             br.heroVo = hVo;
             myTeam.Add(br);
-            pos.z -= 5;
-            if (i == 2)
-            {
-                pos.x -= 5;
-                pos.z = 45;
-            }
         }
 
-        pos = new Vector3(10, 0, 45);
         for (int i = 0; i < 6; ++i)
         {
             HeroVo hVo = new HeroVo();
@@ -160,19 +153,53 @@ public class BattleController
 
             BattleRole br = new BattleRole();
             br.index = i;
-            br.create(Layer.Instance.battleScene.transform, pos);
+            br.create(Layer.Instance.battleScene.transform);
             br.createHpBar(Layer.Instance.battleUILayer.transform);
             br.initHpBarMax(hVo.hp);
 
             br.isMyTeam = false;
             br.heroVo = hVo;
             targetTeam.Add(br);
-            pos.z -= 5;
-            if (i == 2)
-            {
-                pos.x += 5;
-                pos.z = 45;
-            }
+        }
+        this.initTeamPos();
+    }
+
+    /// <summary>
+    /// 初始化队伍位置
+    /// </summary>
+    private void initTeamPos()
+    {
+        BattleFormation.init();
+        BattleRole br;
+        int count = this.myTeam.Count;
+        int[] matrixAry;
+        Vector3 startPos = BattleFormation.leftStartPos;
+        int gapH = BattleFormation.gapH;
+        int gapV = BattleFormation.gapV;
+        for (int i = 0; i < count; ++i)
+        {
+            br = this.myTeam[i];
+            matrixAry = BattleFormation.leftMatrix[i];
+            int xm = matrixAry[0];
+            int zm = matrixAry[1];
+            Vector3 pos = new Vector3(startPos.x + (xm - 1) * gapH, 
+                                      startPos.y, 
+                                      startPos.z - (zm - 1) * gapV);
+            br.setPosition(pos);
+        }
+
+        startPos = BattleFormation.rightStartPos;
+        count = this.targetTeam.Count;
+        for (int i = 0; i < count; ++i)
+        {
+            br = this.targetTeam[i];
+            matrixAry = BattleFormation.rightMatrix[i];
+            int xm = matrixAry[0];
+            int zm = matrixAry[1];
+            Vector3 pos = new Vector3(startPos.x + (xm - 1) * gapH,
+                                      startPos.y,
+                                      startPos.z - (zm - 1) * gapV);
+            br.setPosition(pos);
         }
     }
 
