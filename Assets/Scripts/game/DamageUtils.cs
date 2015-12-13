@@ -27,6 +27,8 @@ public class DamageUtils
     public static bool checkRoleDead(HeroVo attackHero, HeroVo hurtHero)
     {
         int damage = DamageUtils.mathDamage(attackHero, hurtHero);
-        return hurtHero.hp - damage <= 0;
+        MonoBehaviour.print("hurtHero.hp " + hurtHero.hp);
+        MonoBehaviour.print("damage " + damage);
+        return (bool)((hurtHero.hp - damage) <= 0);
     }
 }

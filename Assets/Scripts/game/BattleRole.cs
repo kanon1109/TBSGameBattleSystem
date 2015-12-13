@@ -76,10 +76,80 @@ public class BattleRole : object
     {
         get { return _isBack; }
     }
-
+    //位置索引
+    public Vector2 posIndexVector;
     public BattleRole()
     {
         
+    }
+
+    /// <summary>
+    /// 创建角色模型
+    /// </summary>
+    /// <param name=parent>父级容器</param>
+    /// <returns></returns>
+    public void create(Transform parent, Vector3 pos = new Vector3())
+    {
+        GameObject pf = Resources.Load("Prefabs/role") as GameObject;
+        this.roleGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
+        this.roleGo.transform.SetParent(parent);
+        this.roleGo.transform.localScale = new Vector3(1, 1, 1);
+        this.roleGo.transform.localPosition = pos;
+        this._startPos = pos;
+        if (this.timer == null)
+            this.timer = this.roleGo.AddComponent<Timer>();
+        else
+            this.timer = this.roleGo.GetComponent<Timer>();
+        this.timer.createTimer(.01f, -1, updateHandler);
+        this.timer.start();
+    }
+
+    /// <summary>
+    /// 设置位置
+    /// </summary>
+    /// <param name="pos">位置</param>
+    public void setPosition(Vector3 pos)
+    {
+        if (this.roleGo == null) return;
+        this.roleGo.transform.localPosition = pos;
+        this._startPos = pos;
+    }
+
+    /// <summary>
+    /// 创建血条
+    /// </summary>
+    /// <param name="parent">父级容器</param>
+    public void createHpBar(Transform parent)
+    {
+        if (this.hpBar == null)
+        {
+            GameObject pf = Resources.Load("Prefabs/hpBar") as GameObject;
+            this.hpBarGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
+            this.hpBarGo.transform.SetParent(parent);
+            this.hpBarGo.transform.localScale = new Vector3(1, 1, 1);
+            this.hpBarGo.transform.localPosition = new Vector3();
+            this.hpBar = this.hpBarGo.GetComponent<HpBar>();
+        }
+    }
+
+    /// <summary>
+    /// 初始化满血血量
+    /// </summary>
+    /// <param name="maxHp">满血</param>
+    public void initHpBarMax(int maxHp)
+    {
+        if (this.hpBar != null)
+            this.hpBar.setMaxHp(maxHp);
+    }
+
+    /// <summary>
+    /// 更新血条位置
+    /// </summary>
+    private void updateHpBarPos()
+    {
+        if (this.hpBarGo != null)
+            this.hpBarGo.transform.position =
+                Camera.main.WorldToScreenPoint(this.roleGo.transform.position) + new Vector3(0, 30, 0);
     }
 
     /// <summary>
@@ -111,10 +181,7 @@ public class BattleRole : object
         if (!this.isMoveBack)
         {
             //攻击动作
-            float posX = this.roleGo.transform.localPosition.x;
-            if(this.isMyTeam) posX += 1.5f;
-            else posX -= 1.5f;
-            this.roleGo.transform.DOLocalMoveX(posX, .1f).SetDelay(.5f).SetLoops(2, LoopType.Yoyo).OnComplete(attackCompleteHandler);
+            this.attackAct();
         }
         else
         {
@@ -123,16 +190,6 @@ public class BattleRole : object
             this._isBack = true;
             NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_BACK);
         }
-    }
-
-    //攻击动作结束
-    private void attackCompleteHandler()
-    {
-        int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
-        //目标受伤
-        this.targetBr.hurt(damage);
-        //移动回原位
-        this.moveTo(this.startPos, true, moveToTargetComplete);
     }
 
     /// <summary>
@@ -186,84 +243,6 @@ public class BattleRole : object
     }
 
     /// <summary>
-    /// 是否死亡
-    /// </summary>
-    /// <returns></returns>
-    private bool isDead()
-    {
-        return this.heroVo.hp <= 0;
-    }
-
-    /// <summary>
-    /// 创建角色模型
-    /// </summary>
-    /// <param name=parent>父级容器</param>
-    /// <returns></returns>
-    public void create(Transform parent, Vector3 pos = new Vector3())
-    {
-        GameObject pf = Resources.Load("Prefabs/role") as GameObject;
-        this.roleGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
-        this.roleGo.transform.SetParent(parent);
-        this.roleGo.transform.localScale = new Vector3(1, 1, 1);
-        this.roleGo.transform.localPosition = pos;
-        this._startPos = pos;
-        if (this.timer == null)
-            this.timer = this.roleGo.AddComponent<Timer>();
-        else
-            this.timer = this.roleGo.GetComponent<Timer>();
-        this.timer.createTimer(.01f, -1, updateHandler);
-        this.timer.start();
-    }
-
-    /// <summary>
-    /// 设置位置
-    /// </summary>
-    /// <param name="pos">位置</param>
-    public void setPosition(Vector3 pos)
-    {
-        if (this.roleGo == null) return;
-        this.roleGo.transform.localPosition = pos;
-        this._startPos = pos;
-    }
-
-    /// <summary>
-    /// 创建血条
-    /// </summary>
-    /// <param name="parent">父级容器</param>
-    public void createHpBar(Transform parent)
-    {
-        if(this.hpBar == null)
-        {
-            GameObject pf = Resources.Load("Prefabs/hpBar") as GameObject;
-            this.hpBarGo = MonoBehaviour.Instantiate(pf, new Vector3(0, 0), new Quaternion()) as GameObject;
-            this.hpBarGo.transform.SetParent(parent);
-            this.hpBarGo.transform.localScale = new Vector3(1, 1, 1);
-            this.hpBarGo.transform.localPosition = new Vector3();
-            this.hpBar = this.hpBarGo.GetComponent<HpBar>();
-        }
-    }
-
-    /// <summary>
-    /// 初始化满血血量
-    /// </summary>
-    /// <param name="maxHp">满血</param>
-    public void initHpBarMax(int maxHp)
-    {
-        if (this.hpBar != null)
-            this.hpBar.setMaxHp(maxHp);
-    }
-
-    /// <summary>
-    /// 更新血条位置
-    /// </summary>
-    private void updateHpBarPos()
-    {
-        if (this.hpBarGo != null)
-            this.hpBarGo.transform.position =
-                Camera.main.WorldToScreenPoint(this.roleGo.transform.position) + new Vector3(0, 30, 0);
-    }
-
-    /// <summary>
     /// 普通攻击
     /// </summary>
     public void attack()
@@ -271,7 +250,7 @@ public class BattleRole : object
         //没有目标
         if (this.targetBr == null) return;
         //近战和远程
-        int type = BattleConstant.CLOSE;
+        int type = BattleConstant.REMOTE;
         switch (type)
         {
             case BattleConstant.CLOSE:
@@ -283,8 +262,81 @@ public class BattleRole : object
                 break;
             case BattleConstant.REMOTE:
                 //施法动作 + 魔法移动 + 被击动作
+                this.skillAttackAct();
                 break;
         }
+    }
+
+    /// <summary>
+    /// 施法动作
+    /// </summary>
+    private void skillAttackAct()
+    {
+        this._isBack = false;
+        float posX = this.roleGo.transform.localPosition.x;
+        if (this.isMyTeam) posX -= 1.5f;
+        else posX += 1.5f;
+        this.roleGo.transform.DOLocalMoveX(posX, .1f).SetLoops(2, LoopType.Yoyo).OnComplete(skillAttackCompleteHandler);
+    }
+
+    /// <summary>
+    /// 施法动作结束
+    /// </summary>
+    private void skillAttackCompleteHandler()
+    {
+        //创建效果
+        GameObject effectGo = EffectManager.createEffect(this.startPos,
+                                                        "skillEffect",
+                                                        Layer.Instance.battleScene.transform);
+        //移动效果
+        effectGo.transform.DOLocalMove(this.targetBr.startPos, .5f).OnComplete(() => effectMoveCompleteHandler(effectGo));
+    }
+
+    private void effectMoveCompleteHandler(GameObject effectGo)
+    {
+        this._isBack = true;
+        this.isMoveBack = this._isBack;
+        GameObject.Destroy(effectGo);
+        effectGo = null;
+        //执行伤害
+        int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
+        //目标受伤
+        this.targetBr.hurt(damage);
+        this.moveToTargetComplete();
+    }
+
+    /// <summary>
+    /// 普通攻击动作
+    /// </summary>
+    private void attackAct()
+    {
+        float posX = this.roleGo.transform.localPosition.x;
+        if (this.isMyTeam) posX += 1.5f;
+        else posX -= 1.5f;
+        this.roleGo.transform.DOLocalMoveX(posX, .1f).SetDelay(.5f).SetLoops(2, LoopType.Yoyo).OnComplete(attackCompleteHandler);
+    }
+
+    /// <summary>
+    /// 攻击动作结束
+    /// </summary>
+    private void attackCompleteHandler()
+    {
+        int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
+        //目标受伤
+        this.targetBr.hurt(damage);
+        //移动回原位
+        this.moveTo(this.startPos, true, moveToTargetComplete);
+    }
+
+    /// <summary>
+    /// 受伤动作
+    /// </summary>
+    private void hurtAct()
+    {
+        float posX = this.roleGo.transform.localPosition.x;
+        if (!this.isMyTeam) posX += 1.5f;
+        else posX -= 1.5f;
+        this.roleGo.transform.DOLocalMoveX(posX, .1f).SetLoops(2, LoopType.Yoyo).OnComplete(hurtCompleteHandler);
     }
 
     /// <summary>
@@ -301,12 +353,8 @@ public class BattleRole : object
         if (this.hpBar != null) this.hpBar.setHp(this.heroVo.hp);
         //发送死亡消息
         if(this.isDead()) NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_DEAD, this);
-        float posX = this.roleGo.transform.localPosition.x;
-        if(!this.isMyTeam) posX += 1.5f;
-        else posX -= 1.5f;
-        this.roleGo.transform.DOLocalMoveX(posX, .1f).SetLoops(2, LoopType.Yoyo).OnComplete(hurtCompleteHandler);
+        this.hurtAct();
     }
-
 
     //受伤动作结束
     private void hurtCompleteHandler()
@@ -323,6 +371,16 @@ public class BattleRole : object
     public void setAttackTarget(BattleRole br)
     {
         this.targetBr = br;
+    }
+
+    /// <summary>
+    /// 是否死亡
+    /// </summary>
+    /// <returns></returns>
+    private bool isDead()
+    {
+        if (this.heroVo == null) return true;
+        return this.heroVo.hp <= 0;
     }
 
     /// <summary>

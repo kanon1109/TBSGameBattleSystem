@@ -9,7 +9,7 @@ using UnityEngine;
 /// TODO 
 /// [一轮内的状态]
 /// [显示掉血和人物血量]
-/// 增加阵位 通过阵位判断距离
+/// [增加阵位 通过阵位判断距离]
 /// 远程攻击
 /// </summary>
 public class BattleController
@@ -129,8 +129,10 @@ public class BattleController
         {
             HeroVo hVo = new HeroVo();
             hVo.atk = RandomUtil.randint(15, 35);
+            hVo.atk = 20;
             hVo.def = RandomUtil.randint(2, 5);
             hVo.hp = RandomUtil.randint(20, 50);
+
             hVo.id = i + 1;
 
             BattleRole br = new BattleRole();
@@ -186,6 +188,9 @@ public class BattleController
                                       startPos.y, 
                                       startPos.z - (zm - 1) * gapV);
             br.setPosition(pos);
+            int posX = BattleFormation.leftPosIndex[i][0];
+            int posY = BattleFormation.leftPosIndex[i][1];
+            br.posIndexVector = new Vector2(posX, posY);
         }
 
         startPos = BattleFormation.rightStartPos;
@@ -200,6 +205,9 @@ public class BattleController
                                       startPos.y,
                                       startPos.z - (zm - 1) * gapV);
             br.setPosition(pos);
+            int posX = BattleFormation.rightPosIndex[i][0];
+            int posY = BattleFormation.rightPosIndex[i][1];
+            br.posIndexVector = new Vector2(posX, posY);
         }
     }
 
@@ -231,7 +239,7 @@ public class BattleController
         if (num > team.Count) num = team.Count;
         for (int i = 0; i < num; ++i)
         {
-            MonoBehaviour.print(teamIndex + "号位置");
+            //MonoBehaviour.print(teamIndex + "号位置");
             BattleRole br = team[teamIndex];
             this.attackList.Add(br);
             teamIndex++;
@@ -267,7 +275,7 @@ public class BattleController
             {
                 BattleRole targetBr = targetList[j];
                 if (closeList.IndexOf(targetBr) != -1) continue;
-                float curDis = (attackRole.startPos - targetBr.startPos).sqrMagnitude;
+                float curDis = (attackRole.posIndexVector - targetBr.posIndexVector).sqrMagnitude;
                 if (curDis < dis)
                 {
                     index = j;
@@ -279,6 +287,7 @@ public class BattleController
             if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
                 closeList.Add(chooseBr);
             //将目标存放进去
+            MonoBehaviour.print("index " + chooseBr.index);
             attackRole.setAttackTarget(chooseBr);
         }
     }
@@ -289,7 +298,7 @@ public class BattleController
     /// <param name="param"></param>
     private void startRoleAttack(object param)
     {
-        MonoBehaviour.print("this.attackList.Count " + this.attackList.Count);
+        //MonoBehaviour.print("this.attackList.Count " + this.attackList.Count);
         if (this.attackList.Count == 0) return;
         this.isStartAttack = true;
         BattleRole br = this.attackList[0];
