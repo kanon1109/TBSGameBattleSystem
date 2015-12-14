@@ -145,7 +145,7 @@ public class BattleController
             myTeam.Add(br);
         }
 
-        for (int i = 0; i < 6; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             HeroVo hVo = new HeroVo();
             hVo.atk = RandomUtil.randint(15, 35);
@@ -261,20 +261,21 @@ public class BattleController
         List<BattleRole> targetList;
         if (isMyTeam) targetList = this.targetTeam;
         else targetList = this.myTeam;
+        this.initRoleAttackData(isMyTeam);
         int count = this.attackList.Count;
         int targetCount = targetList.Count;
         //关闭列表 存放一次进攻后血量为0的角色
-        List<BattleRole> closeList = new List<BattleRole>();
+        List<int> closeList = new List<int>();
         for (int i = 0; i < count; ++i)
         {
             BattleRole attackRole = this.attackList[i];
             float dis = float.MaxValue;
-            int index = 0;
+            int index = -1;
             //查找距离最近的对手
             for (int j = 0; j < targetCount; ++j)
             {
                 BattleRole targetBr = targetList[j];
-                if (closeList.IndexOf(targetBr) != -1) continue;
+                if (closeList.IndexOf(targetBr.index) != -1) continue;
                 float curDis = (attackRole.posIndexVector - targetBr.posIndexVector).sqrMagnitude;
                 if (curDis < dis)
                 {
@@ -283,12 +284,17 @@ public class BattleController
                 }
             }
             //计算被攻击者剩余血量 如果进攻后血量为0 则放入关闭列表中
-            BattleRole chooseBr = targetList[index];
-            if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
-                closeList.Add(chooseBr);
-            //将目标存放进去
-            MonoBehaviour.print("index " + chooseBr.index);
-            attackRole.setAttackTarget(chooseBr);
+            if(index != -1)
+            {
+                BattleRole chooseBr = targetList[index];
+                if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
+                {
+                    MonoBehaviour.print("死亡列表 index " + chooseBr.index);
+                    closeList.Add(chooseBr.index);
+                }
+                //将目标存放进去
+                attackRole.setAttackTarget(chooseBr);
+            }
         }
     }
 
@@ -368,6 +374,24 @@ public class BattleController
             this.isMyTeam = true;
             this.isStartAttack = false;
             NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROUND_FINISH);
+        }
+    }
+
+    /// <summary>
+    /// 初始化临时血量 用于判断 清空攻击目标数据
+    /// </summary>
+    /// <param name="isMyTeam">是否是我方队伍</param>
+    private void initRoleAttackData(bool isMyTeam)
+    {
+        List<BattleRole> targetList;
+        if (!isMyTeam) targetList = this.targetTeam;
+        else targetList = this.myTeam;
+        int count = targetList.Count;
+        for (int i = 0; i < count; ++i)
+        {
+            BattleRole role = targetList[i];
+            role.setAttackTarget(null);
+            role.heroVo.tempHp = role.heroVo.hp;
         }
     }
 }

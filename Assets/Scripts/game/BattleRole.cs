@@ -249,6 +249,7 @@ public class BattleRole : object
     {
         //没有目标
         if (this.targetBr == null) return;
+        MonoBehaviour.print("targetBr.index " + targetBr.index);
         //近战和远程
         int type = BattleConstant.REMOTE;
         switch (type)

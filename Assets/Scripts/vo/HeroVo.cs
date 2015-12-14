@@ -8,4 +8,6 @@
     public int atk;
 	//防御力
     public int def;
+    //临时存放的血量数据
+    public int tempHp;
 }

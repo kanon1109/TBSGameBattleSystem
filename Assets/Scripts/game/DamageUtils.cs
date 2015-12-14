@@ -19,7 +19,7 @@ public class DamageUtils
     }
 
     /// <summary>
-    /// 判断一次进攻后该武将是否会死亡
+    /// 预先判断该武将是否会被打死
     /// </summary>
     /// <param name="attackHero">进攻方数据</param>
     /// <param name="hurtHero">被攻击方数据</param>
@@ -27,8 +27,9 @@ public class DamageUtils
     public static bool checkRoleDead(HeroVo attackHero, HeroVo hurtHero)
     {
         int damage = DamageUtils.mathDamage(attackHero, hurtHero);
-        MonoBehaviour.print("hurtHero.hp " + hurtHero.hp);
-        MonoBehaviour.print("damage " + damage);
-        return (bool)((hurtHero.hp - damage) <= 0);
+        hurtHero.tempHp -= damage;
+        if (hurtHero.tempHp < 0) hurtHero.tempHp = 0;
+        MonoBehaviour.print("hurtHero.tempHp " + hurtHero.tempHp);
+        return (bool)(hurtHero.tempHp <= 0);
     }
 }
