@@ -11,8 +11,6 @@ public class BattleRole : object
     //--------------------------
     //人物模型
     private GameObject roleGo = null;
-    //位置索引
-    private int _index = -1;
     //起始位置
     private Vector3 _startPos;
     //绑定的武将数据
@@ -35,12 +33,6 @@ public class BattleRole : object
     private HpBar hpBar;
     private GameObject hpBarGo;
     //-------------get set ---------------
-    public int index
-    {
-        get { return _index; }
-        set { _index = value; }
-    }
-
     public Vector3 startPos
     {
         get { return _startPos; }
@@ -64,6 +56,12 @@ public class BattleRole : object
     }
     //位置索引
     public Vector2 posIndexVector;
+    //位置索引
+    public int index = -1;
+    //上一个位置
+    public int prevIndex = -1;
+    //下一个位置
+    public int nextIndex = -1;
     public BattleRole()
     {
         

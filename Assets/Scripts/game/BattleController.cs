@@ -10,7 +10,10 @@ using UnityEngine;
 /// [一轮内的状态]
 /// [显示掉血和人物血量]
 /// [增加阵位 通过阵位判断距离]
-/// 远程攻击
+/// [远程攻击]
+/// 创建角色顺位的链表
+/// bug 连续按 攻击 人物会卡死
+/// getAttacker 获取攻击者顺位有bug
 /// </summary>
 public class BattleController
 {
@@ -93,6 +96,8 @@ public class BattleController
                 break;
             }
         }
+        //重置链表
+        this.initRoleIndex();
     }
 
     /// <summary>
@@ -138,7 +143,6 @@ public class BattleController
             hVo.id = i + 1;
 
             BattleRole br = new BattleRole();
-            br.index = i;
             br.create(Layer.Instance.battleScene.transform);
             br.createHpBar(Layer.Instance.battleUILayer.transform);
             br.initHpBarMax(hVo.hp);
@@ -173,6 +177,7 @@ public class BattleController
             targetTeam.Add(br);
         }
         this.initTeamPos();
+        this.initRoleIndex();
     }
 
     /// <summary>
@@ -221,6 +226,42 @@ public class BattleController
     }
 
     /// <summary>
+    /// 初始化角色顺位
+    /// </summary>
+    private void initRoleIndex()
+    {
+        int count = this.myTeam.Count;
+        for (int i = 0; i < count; i++)
+        {
+            BattleRole br = this.myTeam[i];
+            br.index = i;
+            if (i == 0) 
+                br.prevIndex = count - 1;
+            else 
+                br.prevIndex = i - 1;
+
+            if (i == count - 1) br.nextIndex = 0;
+            else br.nextIndex = i + 1;
+        }
+
+        count = this.targetTeam.Count;
+        for (int i = 0; i < count; i++)
+        {
+            BattleRole br = this.targetTeam[i];
+            br.index = i;
+            if (i == 0) 
+                br.prevIndex = count - 1;
+            else 
+                br.prevIndex = i - 1;
+
+            if (i == count - 1) 
+                br.nextIndex = 0;
+            else 
+                br.nextIndex = i + 1;
+        }
+    }
+
+    /// <summary>
     /// 讲本轮出战的攻击者存入列表中
     /// </summary>
     /// <param name="isMyTeam">是否从我方队伍里获取</param>
@@ -248,12 +289,13 @@ public class BattleController
         if (num > team.Count) num = team.Count;
         for (int i = 0; i < num; ++i)
         {
-            //MonoBehaviour.print(teamIndex + "号位置");
+            MonoBehaviour.print(teamIndex + "号位置");
             BattleRole br = team[teamIndex];
             this.attackList.Add(br);
             teamIndex++;
             if (teamIndex > team.Count - 1) teamIndex = 0;
         }
+        MonoBehaviour.print("下次的" + teamIndex + "号位置");
         //保存当前的队伍中选择的人物索引
         if (isMyTeam)
             this.myTeamIndex = teamIndex;
