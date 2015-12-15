@@ -132,6 +132,8 @@ public class BattleController
             hVo.atk = 20;
             hVo.def = RandomUtil.randint(2, 5);
             hVo.hp = RandomUtil.randint(20, 50);
+            hVo.attackType = RandomUtil.randint(1, 2);
+            MonoBehaviour.print(hVo.attackType);
 
             hVo.id = i + 1;
 
@@ -152,6 +154,13 @@ public class BattleController
             hVo.def = RandomUtil.randint(2, 5);
             hVo.hp = RandomUtil.randint(20, 50);
             hVo.id = i + 6;
+            hVo.attackType = RandomUtil.randint(1, 2);
+            MonoBehaviour.print(hVo.attackType);
+            if (i == 3)
+            {
+                hVo.attackType = 1;
+                hVo.hp = 200;
+            }
 
             BattleRole br = new BattleRole();
             br.index = i;

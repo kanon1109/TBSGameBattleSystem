@@ -10,4 +10,6 @@
     public int def;
     //临时存放的血量数据
     public int tempHp;
+    //攻击类型 1，2
+    public int attackType;
 }
