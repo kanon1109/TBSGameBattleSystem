@@ -18,7 +18,8 @@ public class BattleFormation
     public static List<int[]> leftPosIndex;
     //右边位置索引（用于计算距离）
     public static List<int[]> rightPosIndex;
-
+    //阵位最大人数
+    public static int MAX_ROLE_COUNT = 6;
     /// <summary>
     /// 初始化阵型
     /// </summary>

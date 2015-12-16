@@ -11,16 +11,19 @@ using UnityEngine;
 /// [显示掉血和人物血量]
 /// [增加阵位 通过阵位判断距离]
 /// [远程攻击]
-/// 创建角色顺位的链表
-/// bug 连续按 攻击 人物会卡死
-/// getAttacker 获取攻击者顺位有bug
+/// [bug 连续按 攻击 人物会卡死]
+/// [getAttacker 获取攻击者顺位有bug]
 /// </summary>
 public class BattleController
 {
-    //我方队伍
+    //我方队伍(人物死亡后就从列表中删除)
     private List<BattleRole> myTeam = new List<BattleRole>();
-    //对方队伍
+    //对方队伍(人物死亡后就从列表中删除)
     private List<BattleRole> targetTeam = new List<BattleRole>();
+    //我方队伍(人物死亡后不删除人物而是设为null) 用于选择攻击者
+    private List<BattleRole> myTeamAry = new List<BattleRole>();
+    //对方队伍(人物死亡后不删除人物而是设为null) 用于选择攻击者
+    private List<BattleRole> targetTeamAry = new List<BattleRole>();
     //攻击方临时列表
     private List<BattleRole> attackList = new List<BattleRole>(); 
     //我方队伍的起始索引
@@ -47,18 +50,27 @@ public class BattleController
     public void init()
     {
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
-        NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_DEAD, roleDeadHandler);
         NotificationCenter.getInstance().addObserver(BattleMsgConstant.ROLE_BACK, roleBackHandler);
         KeyboardManager.registerKey(UnityEngine.KeyCode.A, onKeyAttackHandler, false);
-        this.initTestData();
+        KeyboardManager.registerKey(UnityEngine.KeyCode.R, onKeyResetHandler, false);
         this.resetData();
+        this.initTestData();
+    }
+
+    private void onKeyResetHandler()
+    {
+        this.clear();
+        this.resetData();
+        this.initTestData();
+        NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROUND_FINISH);
     }
 
     //人物归位消息
     private void roleBackHandler(object param)
     {
-        if(this.isAllBack(this.isMyTeam))
+        if (this.isAllBack(this.isMyTeam))
         {
+            MonoBehaviour.print("全部返回");
             if (!this.allDead(!this.isMyTeam))
             {
                 //如果全部归位 攻防切换
@@ -82,10 +94,17 @@ public class BattleController
         int index = br.index;
         //从目标列表中删除此目标
         List<BattleRole> list;
-        if (this.isMyTeam) 
+        List<BattleRole> array;
+        if (this.isMyTeam)
+        {
             list = this.targetTeam;
-        else 
+            array = this.targetTeamAry;
+        }
+        else
+        {
             list = this.myTeam;
+            array = this.myTeamAry;
+        }
         int length = list.Count;
         for (int i = 0; i < length; i++)
         {
@@ -96,8 +115,16 @@ public class BattleController
                 break;
             }
         }
-        //重置链表
-        this.initRoleIndex();
+        length = array.Count;
+        for (int i = 0; i < length; i++)
+        {
+            BattleRole battleRole = array[i];
+            if (battleRole.index == index)
+            {
+                battleRole.isDeaded = true;
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -112,6 +139,17 @@ public class BattleController
         this.myTeamAttacked = false;
         this.targetTeamAttacked = false;
         this.isStartAttack = false;
+
+        this.myTeam.Clear();
+        this.targetTeam.Clear();
+        this.myTeamAry.Clear();
+        this.targetTeamAry.Clear();
+
+        for (int i = 0; i < BattleFormation.MAX_ROLE_COUNT; ++i)
+        {
+            this.myTeamAry.Add(null);
+            this.targetTeamAry.Add(null);
+        }
     }
 
     private void onKeyAttackHandler()
@@ -138,17 +176,33 @@ public class BattleController
             hVo.def = RandomUtil.randint(2, 5);
             hVo.hp = RandomUtil.randint(20, 50);
             hVo.attackType = RandomUtil.randint(1, 2);
-            MonoBehaviour.print(hVo.attackType);
 
             hVo.id = i + 1;
+            if (i == 1)
+            {
+                hVo.hp = 5;
+                hVo.attackType = 2;
+            }
+            if (i == 0)
+            {
+                hVo.hp = 200;
+                hVo.attackType = 2;
+            }
+            if (i == 2)
+            {
+                hVo.hp = 200;
+                hVo.attackType = 2;
+            }
 
             BattleRole br = new BattleRole();
+            br.index = i;
             br.create(Layer.Instance.battleScene.transform);
             br.createHpBar(Layer.Instance.battleUILayer.transform);
             br.initHpBarMax(hVo.hp);
             br.isMyTeam = true;
             br.heroVo = hVo;
-            myTeam.Add(br);
+            this.myTeam.Add(br);
+            this.myTeamAry[i] = br;
         }
 
         for (int i = 0; i < 4; ++i)
@@ -159,11 +213,11 @@ public class BattleController
             hVo.hp = RandomUtil.randint(20, 50);
             hVo.id = i + 6;
             hVo.attackType = RandomUtil.randint(1, 2);
-            MonoBehaviour.print(hVo.attackType);
             if (i == 3)
             {
                 hVo.attackType = 1;
-                hVo.hp = 200;
+                hVo.atk = 80;
+                hVo.hp = 300;
             }
 
             BattleRole br = new BattleRole();
@@ -174,10 +228,10 @@ public class BattleController
 
             br.isMyTeam = false;
             br.heroVo = hVo;
-            targetTeam.Add(br);
+            this.targetTeam.Add(br);
+            this.targetTeamAry[i] = br;
         }
         this.initTeamPos();
-        this.initRoleIndex();
     }
 
     /// <summary>
@@ -226,42 +280,6 @@ public class BattleController
     }
 
     /// <summary>
-    /// 初始化角色顺位
-    /// </summary>
-    private void initRoleIndex()
-    {
-        int count = this.myTeam.Count;
-        for (int i = 0; i < count; i++)
-        {
-            BattleRole br = this.myTeam[i];
-            br.index = i;
-            if (i == 0) 
-                br.prevIndex = count - 1;
-            else 
-                br.prevIndex = i - 1;
-
-            if (i == count - 1) br.nextIndex = 0;
-            else br.nextIndex = i + 1;
-        }
-
-        count = this.targetTeam.Count;
-        for (int i = 0; i < count; i++)
-        {
-            BattleRole br = this.targetTeam[i];
-            br.index = i;
-            if (i == 0) 
-                br.prevIndex = count - 1;
-            else 
-                br.prevIndex = i - 1;
-
-            if (i == count - 1) 
-                br.nextIndex = 0;
-            else 
-                br.nextIndex = i + 1;
-        }
-    }
-
-    /// <summary>
     /// 讲本轮出战的攻击者存入列表中
     /// </summary>
     /// <param name="isMyTeam">是否从我方队伍里获取</param>
@@ -270,32 +288,40 @@ public class BattleController
     {
         this.attackList.Clear();
         List<BattleRole> team = null;
+        //选定角色的索引
         int teamIndex;
         if (isMyTeam)
         {
             teamIndex = this.myTeamIndex;
-            team = this.myTeam;
+            team = this.myTeamAry;
         }
         else
         {
             teamIndex = this.targetTeamIndex;
-            team = this.targetTeam;
+            team = this.targetTeamAry;
         }
         //判断全部死亡
         if(this.allDead(isMyTeam)) return;
-        //如果索引超过了最后一位则到第一位
-        if (teamIndex > team.Count - 1) teamIndex = 0;
         //人数不超过列表长度
         if (num > team.Count) num = team.Count;
-        for (int i = 0; i < num; ++i)
+        int count = team.Count;
+        //选中的数量
+        int selectCount = 0;
+        for (int i = 0; i < count; ++i)
         {
-            MonoBehaviour.print(teamIndex + "号位置");
             BattleRole br = team[teamIndex];
-            this.attackList.Add(br);
+            if (br != null && !br.isDeaded)
+            {
+                MonoBehaviour.print(teamIndex + "号位置");
+                MonoBehaviour.print("攻击类型：" + br.heroVo.attackType);
+                this.attackList.Add(br);
+                selectCount++;
+            }
             teamIndex++;
-            if (teamIndex > team.Count - 1) teamIndex = 0;
+            if (teamIndex > count - 1) teamIndex = 0;
+            if (selectCount >= num) break;
         }
-        MonoBehaviour.print("下次的" + teamIndex + "号位置");
+        MonoBehaviour.print("下次的索引" + teamIndex + "号位置");
         //保存当前的队伍中选择的人物索引
         if (isMyTeam)
             this.myTeamIndex = teamIndex;
@@ -335,16 +361,14 @@ public class BattleController
                 }
             }
             //计算被攻击者剩余血量 如果进攻后血量为0 则放入关闭列表中
-            if(index != -1)
+            if (index != -1)
             {
                 BattleRole chooseBr = targetList[index];
                 if (DamageUtils.checkRoleDead(attackRole.heroVo, chooseBr.heroVo))
-                {
-                    MonoBehaviour.print("死亡列表 index " + chooseBr.index);
                     closeList.Add(chooseBr.index);
-                }
                 //将目标存放进去
                 attackRole.setAttackTarget(chooseBr);
+                attackRole.isAttacking = true;
             }
         }
     }
@@ -397,7 +421,8 @@ public class BattleController
         for (int i = 0; i < count; i++)
         {
             BattleRole br = team[i];
-            if (!br.isBack) return false;
+            if (br.isAttacking)
+                return false;
         }
         return true;
     }
@@ -440,9 +465,36 @@ public class BattleController
         int count = targetList.Count;
         for (int i = 0; i < count; ++i)
         {
-            BattleRole role = targetList[i];
-            role.setAttackTarget(null);
-            role.heroVo.tempHp = role.heroVo.hp;
+            BattleRole br = targetList[i];
+            br.setAttackTarget(null);
+            br.isAttacking = false;
+            br.heroVo.tempHp = br.heroVo.hp;
         }
+    }
+
+    /// <summary>
+    /// 清空战斗数据
+    /// </summary>
+    public void clear()
+    {
+        int count = this.myTeam.Count;
+        for (int i = 0; i < count; i++)
+        {
+            BattleRole br = this.myTeam[i];
+            br.destroy();
+            br = null;
+        }
+        this.myTeam.Clear();
+        this.myTeamAry.Clear();
+
+        count = this.targetTeam.Count;
+        for (int i = 0; i < count; i++)
+        {
+            BattleRole br = this.targetTeam[i];
+            br.destroy();
+            br = null;
+        }
+        this.targetTeam.Clear();
+        this.targetTeamAry.Clear();
     }
 }

@@ -29,7 +29,6 @@ public class DamageUtils
         int damage = DamageUtils.mathDamage(attackHero, hurtHero);
         hurtHero.tempHp -= damage;
         if (hurtHero.tempHp < 0) hurtHero.tempHp = 0;
-        MonoBehaviour.print("hurtHero.tempHp " + hurtHero.tempHp);
         return (bool)(hurtHero.tempHp <= 0);
     }
 }

@@ -28,7 +28,7 @@ public class BattleRole : object
     //当前伤害的血量
     private int curDamage = 0;
     //是否归位
-    private bool _isBack = true;
+    private bool _isAttacking = false;
     //血条
     private HpBar hpBar;
     private GameObject hpBarGo;
@@ -49,10 +49,11 @@ public class BattleRole : object
         get { return _isMyTeam; }
         set { _isMyTeam = value; }
     }
-
-    public bool isBack
+    //是否正处于攻击状态
+    public bool isAttacking
     {
-        get { return _isBack; }
+        get { return _isAttacking; }
+        set { _isAttacking = value; }
     }
     //位置索引
     public Vector2 posIndexVector;
@@ -62,6 +63,8 @@ public class BattleRole : object
     public int prevIndex = -1;
     //下一个位置
     public int nextIndex = -1;
+    //标记是否死亡
+    public bool isDeaded = false;
     public BattleRole()
     {
         
@@ -144,7 +147,6 @@ public class BattleRole : object
     /// <param name="actComplete">移动结束回调</param>
     private void moveAct(Vector3 pos, bool isBack, TweenCallback actComplete = null)
     {
-        this._isBack = false;
         this.isMoveBack = isBack;
         this.roleGo.transform.DOLocalMove(pos, .4f).SetEase(Ease.Linear).OnComplete(actComplete);
     }
@@ -159,8 +161,9 @@ public class BattleRole : object
         else
         {
             //回原位
+            MonoBehaviour.print("moveBack");
             this.roleGo.transform.localPosition = this._startPos;
-            this._isBack = true;
+            this._isAttacking = false;
             NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_BACK);
         }
     }
@@ -181,7 +184,6 @@ public class BattleRole : object
         //没有目标
         if (this.targetBr == null) return;
         if (this.heroVo == null) return;
-        MonoBehaviour.print("targetBr.index " + targetBr.index);
         //近战和远程
         switch (this.heroVo.attackType)
         {
@@ -204,7 +206,6 @@ public class BattleRole : object
     /// </summary>
     private void skillAttackAct()
     {
-        this._isBack = false;
         float posX = this.roleGo.transform.localPosition.x;
         if (this.isMyTeam) posX -= 1.5f;
         else posX += 1.5f;
@@ -226,8 +227,8 @@ public class BattleRole : object
 
     private void effectMoveCompleteHandler(GameObject effectGo)
     {
-        this._isBack = true;
-        this.isMoveBack = this._isBack;
+        this._isAttacking = false;
+        this.isMoveBack = true;
         GameObject.Destroy(effectGo);
         effectGo = null;
         //执行伤害
@@ -278,13 +279,14 @@ public class BattleRole : object
     public void hurt(int damage)
     {
         //受伤效果
-        MonoBehaviour.print("hurt");
         this.curDamage = damage;
         this.heroVo.hp -= damage;
         Damage.show(Layer.Instance.battleUILayer.transform, damage, this.hpBar.transform.localPosition);
-        if (this.hpBar != null) this.hpBar.setHp(this.heroVo.hp);
+        if (this.hpBar != null) 
+            this.hpBar.setHp(this.heroVo.hp);
         //发送死亡消息
-        if(this.isDead()) NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_DEAD, this);
+        if (this.isDead()) 
+            NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROLE_DEAD, this);
         this.hurtAct();
     }
 
@@ -293,7 +295,10 @@ public class BattleRole : object
     {
         //扣血效果
         if(this.isDead())
+        {
+            MonoBehaviour.print("dead");
             this.destroy();
+        }
     }
 
     /// <summary>
@@ -320,6 +325,10 @@ public class BattleRole : object
     /// </summary>
     public void destroy()
     {
+        if (this.timer != null) 
+            this.timer.stop();
+        if (this.roleGo != null) 
+            this.roleGo.transform.DOKill();
         GameObject.Destroy(this.roleGo);
         this.roleGo = null;
         GameObject.Destroy(this.hpBarGo);
