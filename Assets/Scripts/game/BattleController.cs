@@ -5,6 +5,7 @@ using UnityEngine;
 /// 规则：
 /// 1.根据数量获取出战人数，队伍中每人轮流出战。（例如：第一轮 1号位出战，第二轮2号位 …… 依次类推）
 /// 2.攻击者优先攻击最靠近自己的敌人
+/// 3.范围伤害分别有 横向或者纵向一排伤害 伤害数值通过 DamageUtils 来计算。
 /// 
 /// TODO 
 /// [一轮内的状态]
@@ -13,6 +14,8 @@ using UnityEngine;
 /// [远程攻击]
 /// [bug 连续按 攻击 人物会卡死]
 /// [getAttacker 获取攻击者顺位有bug]
+/// 增加范围伤害 以及范围伤害预判
+/// 
 /// </summary>
 public class BattleController
 {

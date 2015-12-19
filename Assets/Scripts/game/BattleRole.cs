@@ -32,6 +32,10 @@ public class BattleRole : object
     //血条
     private HpBar hpBar;
     private GameObject hpBarGo;
+    //角色移动间隔
+    private float atkMoveDuration = .4f;
+    //技能移动间隔
+    private float skillMoveDuration = .3f;
     //-------------get set ---------------
     public Vector3 startPos
     {
@@ -148,7 +152,7 @@ public class BattleRole : object
     private void moveAct(Vector3 pos, bool isBack, TweenCallback actComplete = null)
     {
         this.isMoveBack = isBack;
-        this.roleGo.transform.DOLocalMove(pos, .4f).SetEase(Ease.Linear).OnComplete(actComplete);
+        this.roleGo.transform.DOLocalMove(pos, this.atkMoveDuration).SetEase(Ease.Linear).OnComplete(actComplete);
     }
 
     private void moveToTargetComplete()
@@ -222,7 +226,7 @@ public class BattleRole : object
                                                         "skillEffect",
                                                         Layer.Instance.battleScene.transform);
         //移动效果
-        effectGo.transform.DOLocalMove(this.targetBr.startPos, .3f).SetEase(Ease.Linear).OnComplete(() => effectMoveCompleteHandler(effectGo));
+        effectGo.transform.DOLocalMove(this.targetBr.startPos, this.skillMoveDuration).SetEase(Ease.Linear).OnComplete(() => effectMoveCompleteHandler(effectGo));
     }
 
     private void effectMoveCompleteHandler(GameObject effectGo)
