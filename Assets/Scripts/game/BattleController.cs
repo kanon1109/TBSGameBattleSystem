@@ -14,7 +14,7 @@ using UnityEngine;
 /// [远程攻击]
 /// [bug 连续按 攻击 人物会卡死]
 /// [getAttacker 获取攻击者顺位有bug]
-/// 增加范围伤害 以及范围伤害预判
+/// [增加范围伤害 以及范围伤害预判]
 /// 
 /// </summary>
 public class BattleController
@@ -47,6 +47,8 @@ public class BattleController
     private bool targetTeamAttacked = false;
     //是否开始攻击了
     private bool isStartAttack = false;
+    //参与攻击的人数
+    private int attackRoleNum = 1;
     /// <summary>
     /// 初始化
     /// </summary>
@@ -162,7 +164,7 @@ public class BattleController
             !this.targetTeamAttacked && 
             !this.isStartAttack)
         {
-            this.getAttacker(this.isMyTeam, 3);
+            this.getAttacker(this.isMyTeam, this.attackRoleNum);
             this.getAttackTarget(this.isMyTeam);
             this.startRoleAttack(null);
         }
@@ -179,12 +181,14 @@ public class BattleController
             hVo.def = RandomUtil.randint(2, 5);
             hVo.hp = RandomUtil.randint(20, 50);
             hVo.attackType = RandomUtil.randint(1, 2);
+            hVo.attackRangeType = RandomUtil.randint(0, 2);
 
             hVo.id = i + 1;
             if (i == 1)
             {
                 hVo.hp = 5;
                 hVo.attackType = 2;
+
             }
             if (i == 0)
             {
@@ -216,6 +220,7 @@ public class BattleController
             hVo.hp = RandomUtil.randint(20, 50);
             hVo.id = i + 6;
             hVo.attackType = RandomUtil.randint(1, 2);
+
             if (i == 3)
             {
                 hVo.attackType = 1;
@@ -324,7 +329,6 @@ public class BattleController
             if (teamIndex > count - 1) teamIndex = 0;
             if (selectCount >= num) break;
         }
-        MonoBehaviour.print("下次的索引" + teamIndex + "号位置");
         //保存当前的队伍中选择的人物索引
         if (isMyTeam)
             this.myTeamIndex = teamIndex;
@@ -339,8 +343,17 @@ public class BattleController
     private void getAttackTarget(bool isMyTeam)
     {
         List<BattleRole> targetList;
-        if (isMyTeam) targetList = this.targetTeam;
-        else targetList = this.myTeam;
+        List<BattleRole> targetAry;
+        if (isMyTeam)
+        {
+            targetList = this.targetTeam;
+            targetAry = this.targetTeamAry;
+        }
+        else
+        {
+            targetList = this.myTeam;
+            targetAry = this.myTeamAry;
+        }
         this.initRoleAttackData(isMyTeam);
         int count = this.attackList.Count;
         int targetCount = targetList.Count;
@@ -371,6 +384,29 @@ public class BattleController
                     closeList.Add(chooseBr.index);
                 //将目标存放进去
                 attackRole.setAttackTarget(chooseBr);
+                if (attackRole.heroVo.attackRangeType != 0)
+                {
+                    List<BattleRole> rangeAttackRoleList = new List<BattleRole>();
+                    bool isHorizontal = attackRole.heroVo.attackRangeType == BattleConstant.ATTACK_RANGE_HORIZONTAL;
+                    int [] rangeIndexAry = BattleFormation.getPosIndexByDirection(isHorizontal, chooseBr.index);
+                    //遍历posIndexAry 剔除 chooseBr.index 和 closeList中的索引 
+                    //判断checkRoleDead 将血为空的添加进col
+                    int length = rangeIndexAry.Length;
+                    for (int j = 0; j < length; j++)
+                    {
+                        int rangeIndex = rangeIndexAry[j];
+                        if (rangeIndex == chooseBr.index ||
+                            closeList.IndexOf(rangeIndex) != -1) continue;
+                        BattleRole rangeAttackRole = targetAry[rangeIndex];
+                        if (rangeAttackRole != null && !rangeAttackRole.isDeaded)
+                        {
+                            if (DamageUtils.checkRoleDead(attackRole.heroVo, rangeAttackRole.heroVo))
+                                closeList.Add(chooseBr.index);
+                            rangeAttackRoleList.Add(rangeAttackRole);
+                        }
+                    }
+                    attackRole.setAttackRangeTarget(rangeAttackRoleList);
+                }
                 attackRole.isAttacking = true;
             }
         }
@@ -440,7 +476,7 @@ public class BattleController
         if (!this.myTeamAttacked || !this.targetTeamAttacked)
         {
             this.isMyTeam = !this.isMyTeam;
-            this.getAttacker(this.isMyTeam, 3);
+            this.getAttacker(this.isMyTeam, this.attackRoleNum);
             this.getAttackTarget(this.isMyTeam);
             this.startRoleAttack(null);
         }

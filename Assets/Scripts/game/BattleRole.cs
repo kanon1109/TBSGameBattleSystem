@@ -1,6 +1,7 @@
 ﻿using DG.Tweening;
 using UnityEngine;
 using support;
+using System.Collections.Generic;
 public class BattleRole : object 
 {
     //----------人物状态------------
@@ -36,6 +37,8 @@ public class BattleRole : object
     private float atkMoveDuration = .4f;
     //技能移动间隔
     private float skillMoveDuration = .3f;
+    //存放范围攻击的目标列表
+    private List<BattleRole> targetList = null;
     //-------------get set ---------------
     public Vector3 startPos
     {
@@ -237,6 +240,8 @@ public class BattleRole : object
         effectGo = null;
         //执行伤害
         int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
+        //范围伤害
+        this.rangeHurt(damage);
         //目标受伤
         this.targetBr.hurt(damage);
         this.moveToTargetComplete();
@@ -259,6 +264,8 @@ public class BattleRole : object
     private void attackCompleteHandler()
     {
         int damage = DamageUtils.mathDamage(this.heroVo, this.targetBr.heroVo);
+        //范围伤害
+        this.rangeHurt(damage);
         //目标受伤
         this.targetBr.hurt(damage);
         //移动回原位
@@ -294,6 +301,23 @@ public class BattleRole : object
         this.hurtAct();
     }
 
+    /// <summary>
+    /// 范围伤害
+    /// </summary>
+    /// <param name="damage">伤害数值</param>
+    private void rangeHurt(int damage)
+    {
+        if(this.targetList == null) return;
+        int count = this.targetList.Count;
+        for (int i = 0; i < count; ++i)
+		{
+			BattleRole br = this.targetList[i];
+            br.hurt(damage);
+		}
+        this.targetList.Clear();
+        this.targetList = null;
+    }
+
     //受伤动作结束
     private void hurtCompleteHandler()
     {
@@ -312,6 +336,15 @@ public class BattleRole : object
     public void setAttackTarget(BattleRole br)
     {
         this.targetBr = br;
+    }
+
+    /// <summary>
+    /// 设置范围攻击的目标对象列表
+    /// </summary>
+    /// <param name="list">范围攻击目标对象列表</param>
+    public void setAttackRangeTarget(List<BattleRole> list)
+    {
+        this.targetList = list;
     }
 
     /// <summary>
@@ -340,5 +373,8 @@ public class BattleRole : object
         this.hpBar = null;
         this.timer = null;
         this.heroVo = null;
+        if(this.targetList != null)
+           this.targetList.Clear();
+        this.targetList = null;
     }
 }
