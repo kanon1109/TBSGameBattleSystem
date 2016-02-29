@@ -12,4 +12,6 @@
     public int tempHp;
     //攻击类型 1，2
     public int attackType;
+    //攻击范围类型 0无范围，1横排，2竖排
+    public int attackRangeType;
 }
