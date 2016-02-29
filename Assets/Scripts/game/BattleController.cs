@@ -135,7 +135,7 @@ public class BattleController
         this._curRound = 1;
         this.myTeamIndex = 0;
         this.targetTeamIndex = 0;
-        this.isMyTeam = true;
+        this.isMyTeam = false;
         this.myTeamAttacked = false;
         this.targetTeamAttacked = false;
         this.isStartAttack = false;
@@ -447,7 +447,7 @@ public class BattleController
             this._curRound++;
             this.myTeamAttacked = false;
             this.targetTeamAttacked = false;
-            this.isMyTeam = true;
+            this.isMyTeam = !this.isMyTeam;
             this.isStartAttack = false;
             NotificationCenter.getInstance().postNotification(BattleMsgConstant.ROUND_FINISH);
         }
